@@ -1,5 +1,6 @@
 
 MakeADFun_windows_debug = function( data, parameters, random, cpp_name, dir=getwd(), ... ){
+
   # Get and save inputs
   Other_inputs = list(...)
   All_inputs = list( "data"=data, "parameters"=parameters, "random"=random, "Other_inputs"=Other_inputs )
@@ -17,10 +18,19 @@ MakeADFun_windows_debug = function( data, parameters, random, cpp_name, dir=getw
   ",fill=FALSE,sep="")
   sink()
 
-  #
-  gdbsource(paste0(cpp_name,".R"))
-  #if( !is(Try, "try-error")
-  #save( x, file=paste0(x,".RData") )
-  #load( file='Obj.RData')
-  #return( Obj )
+  # Try running
+  Bdg_output = gdbsource(paste0(cpp_name,".R"))
+
+  # Sort out outcomes
+  if( length(grep("#0",Bdg_output))==0 ){
+    Return = MakeADFun(data=All_inputs[['data']], parameters=All_inputs[['parameters']], random=All_inputs[['random']], All_inputs[['Other_inputs']])
+    message("Compiled fine, and returning output from MakeADFun")
+  }else{
+    Return = Bdg_output
+    message("Did not compile, and returning output from bdbsource")
+  }
+
+  # Return
+  #Return = Bdg_output
+  return( Return )
 }

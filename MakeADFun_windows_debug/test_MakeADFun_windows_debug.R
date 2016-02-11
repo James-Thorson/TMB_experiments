@@ -22,8 +22,8 @@ cpp_name = "problem"
 compile( paste0(cpp_name,".cpp"), "-O1 -g", DLLFLAGS="")
 
 data = list( "n_data"=length(Y), "n_factors"=length(unique(Factor)), "Factor"=Factor-1, "Y"=Y)
-parameters = list( "X0"=-10, "log_SD0"=2, "log_SDZ"=2, "Z"=rep(0,Data$n_factor) )
+parameters = list( "X0"=-10, "log_SD0"=2, "log_SDZ"=2, "Z"=rep(0,data$n_factor) )
 random = c("Z")
 
 dyn.load( dynlib(cpp_name) )
-MakeADFun_windows_debug( data=data, cpp_name=cpp_name, parameters=parameters, random=random )
+Output = MakeADFun_windows_debug( data=data, cpp_name=cpp_name, parameters=parameters, random=random )
