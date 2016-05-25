@@ -42,26 +42,25 @@ Type objective_function<Type>::operator() ()
   vector<Type> jnll_comp(2);
   jnll_comp.setZero();
 
-  // Derived quantities
-
   // Precision matrix
-  Eigen::SparseMatrix<Type> Q_matern = Q_spde(spde, exp(ln_kappa) );
+  Type SigmaRatio_ar2matern = sqrt(4*M_PI*exp(2*ln_tau)*exp(2*ln_kappa)) / sqrt((1-exp(ln_kappa*2))*exp(2*ln_tau)); // SigmaRatio_ar2matern := SD_ar/SD_matern
+  Eigen::SparseMatrix<Type> Q_matern = pow(SigmaRatio_ar2matern,-2) * Q_spde(spde, exp(ln_kappa) );
   Eigen::SparseMatrix<Type> Q_ar = (M0*pow(1+exp(ln_kappa*2),2) + M1*(1+exp(ln_kappa*2))*(-exp(ln_kappa)) + M2*exp(ln_kappa*2));
   REPORT( Q_matern );
   REPORT( Q_ar );
 
   // Probability of random effects
   Type Range;
-  Type MargSD;
+  Type MargSD = 1 / sqrt( (1-exp(ln_kappa*2)) * exp(2*ln_tau) );
   if( Options_z(0)==0 ){
+    //MargSD = 1 / sqrt(4 * M_PI * exp(2*ln_tau) * exp(2*ln_kappa));
     jnll_comp(1) += GMRF(Q_matern)( epsilon_j );
     Range = sqrt(8) / exp( ln_kappa );
-    MargSD = 1 / sqrt(4 * M_PI * exp(2*ln_tau) * exp(2*ln_kappa));
   }
   if( Options_z(0)==1 ){
+    //MargSD = 1 / sqrt( (1-exp(ln_kappa*2)) * exp(2*ln_tau) );
     jnll_comp(1) += GMRF(Q_ar)( epsilon_j );
     Range = log(0.1) / ln_kappa;
-    MargSD = 1 / sqrt( (1-exp(ln_kappa*2)) * exp(2*ln_tau) );
   }
   REPORT( Range );
   REPORT( MargSD );

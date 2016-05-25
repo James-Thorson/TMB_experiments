@@ -42,8 +42,6 @@ Type objective_function<Type>::operator() ()
   vector<Type> jnll_comp(2);
   jnll_comp.setZero();
 
-  // Derived quantities
-
   // Precision matrix
   Eigen::SparseMatrix<Type> Q_matern = exp(2*ln_tau) * Q_spde(spde, exp(ln_kappa) );
   Eigen::SparseMatrix<Type> Q_ar = exp(2*ln_tau) * (M0*pow(1+exp(ln_kappa*2),2) + M1*(1+exp(ln_kappa*2))*(-exp(ln_kappa)) + M2*exp(ln_kappa*2));

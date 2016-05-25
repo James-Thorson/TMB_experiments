@@ -1,6 +1,6 @@
 
 
-setwd( "C:/Users/James.Thorson/Desktop/Project_git/TMB_experiments/SPDE vs 2D_AR1" )
+setwd( "C:/Users/James.Thorson/Desktop/Project_git/TMB_experiments/SPDE_vs_2DAR1" )
 
 library(TMB)
 library(RandomFields)
@@ -71,20 +71,22 @@ Data[["Options_z"]] = 1
 Params = list( "beta0"=0, "ln_tau"=0, "ln_kappa"=-2, "epsilon_j"=rarray(nrow(loc_xy)) )
 Obj = MakeADFun( data=Data, parameters=Params, random="epsilon_j", DLL="comparison_method1" )
 Obj$env$beSilent()
-Opt_ar1 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=ifelse(names(Obj$par)=="ln_kappa",0,Inf) )
+Opt_ar1 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=ifelse(names(Obj$par)=="ln_kappa",-0.001,Inf) )
 Report_ar1 = Obj$report()
 # Other parameterization
 Obj = MakeADFun( data=Data, parameters=Obj$env$parList(), random="epsilon_j", DLL="comparison_method2" )
 Obj$env$beSilent()
-Opt_ar2 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr )
+Opt_ar2 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=ifelse(names(Obj$par)=="ln_kappa",-0.001,Inf) )
 Report_ar2 = Obj$report()
 
-# Comparison
+# Comparison -- param #1
 unlist(Report_spde1[c("Range","MargSD")])
 Opt_spde1$par
-unlist(Report_spde2[c("Range","MargSD")])
-Opt_spde2$par
 unlist(Report_ar1[c("Range","MargSD")])
 Opt_ar1$par
+
+# Comparison -- param #1
+unlist(Report_spde2[c("Range","MargSD")])
+Opt_spde2$par
 unlist(Report_ar2[c("Range","MargSD")])
 Opt_ar2$par
