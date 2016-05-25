@@ -12,15 +12,14 @@ library(INLA) # FROM: http://www.r-inla.org/download
 
 Dim = c("n_x"=10, "n_y"=10)
 loc_xy = expand.grid("x"=1:Dim['n_x'], "y"=1:Dim['n_y'])
-Scale = 4
+Range = 4    # Distance with 10% correlation
 Sigma2 = (0.5) ^ 2
 beta0 = 3
 prob_missing = 0.2
 
 # Simulate spatial process
-RMmodel = RMgauss(var=Sigma2, scale=Scale)
+RMmodel = RMgauss(var=Sigma2, scale=Range/2)
 epsilon_xy = array(RFsimulate(model=RMmodel, x=loc_xy[,'x'], y=loc_xy[,'y'])@data[,1], dim=Dim)
-image( z=epsilon_xy )
 
 # SImulate counts
 c_xy = array(NA, dim=dim(epsilon_xy))
@@ -48,30 +47,44 @@ M1 = as( ifelse(as.matrix(dist_grid)==grid_size_km, 1, 0), "dgTMatrix" )
 M2 = as( ifelse(as.matrix(dist_grid)==sqrt(2)*grid_size_km, 1, 0), "dgTMatrix" )
 
 # Compile
-Params = list( "beta0"=0, "ln_sigma2"=0, "logit_rho"=0, "epsilon_xy"=array(rnorm(prod(dim(loc_xy))),dim=dim(epsilon_xy)) )
-compile( "comparison.cpp" )
-dyn.load( dynlib("comparison") )
+compile( "comparison_method1.cpp" )
+compile( "comparison_method2.cpp" )
+dyn.load( dynlib("comparison_method1") )
+dyn.load( dynlib("comparison_method2") )
 Data = list( "Options_z"=0, "c_i"=as.vector(c_xy), "j_i"=mesh$idx$loc-1, "spde"=spde$param.inla[c('M0','M1','M2')], "M0"=M0, "M1"=M1, "M2"=M2 )
 
 ######## SPDE
 Data[["Options_z"]] = 0
 Params = list( "beta0"=0, "ln_tau"=0, "ln_kappa"=0, "epsilon_j"=rarray(mesh$n) )
-# Build object
-Obj = MakeADFun( data=Data, parameters=Params, random="epsilon_j", DLL="comparison" )
-# Optimize
-Opt_spde = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr )
-Report_spde = Obj$report()
+Obj = MakeADFun( data=Data, parameters=Params, random="epsilon_j", DLL="comparison_method1" )
+Obj$env$beSilent()
+Opt_spde1 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr )
+Report_spde1 = Obj$report()
+# Other parameterization
+Obj = MakeADFun( data=Data, parameters=Obj$env$parList(), random="epsilon_j", DLL="comparison_method2" )
+Obj$env$beSilent()
+Opt_spde2 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr )
+Report_spde2 = Obj$report()
 
 ######### Unequal distance 2D autoregressive
 Data[["Options_z"]] = 1
-Params = list( "beta0"=0, "ln_tau"=0, "ln_kappa"=2, "epsilon_j"=rarray(nrow(loc_xy)) )
-# Build object
-Obj = MakeADFun( data=Data, parameters=Params, random="epsilon_j", DLL="comparison" )
-# Optimize
-Opt_ar = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=ifelse(names(Obj$par)=="ln_kappa",0,Inf) )
-Report_ar = Obj$report()
+Params = list( "beta0"=0, "ln_tau"=0, "ln_kappa"=-2, "epsilon_j"=rarray(nrow(loc_xy)) )
+Obj = MakeADFun( data=Data, parameters=Params, random="epsilon_j", DLL="comparison_method1" )
+Obj$env$beSilent()
+Opt_ar1 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr, upper=ifelse(names(Obj$par)=="ln_kappa",0,Inf) )
+Report_ar1 = Obj$report()
+# Other parameterization
+Obj = MakeADFun( data=Data, parameters=Obj$env$parList(), random="epsilon_j", DLL="comparison_method2" )
+Obj$env$beSilent()
+Opt_ar2 = nlminb( start=Obj$par, objective=Obj$fn, gradient=Obj$gr )
+Report_ar2 = Obj$report()
 
 # Comparison
-unlist(Report_spde[c("Range","MargSD")])
-unlist(Report_ar[c("Range","MargSD")])
-
+unlist(Report_spde1[c("Range","MargSD")])
+Opt_spde1$par
+unlist(Report_spde2[c("Range","MargSD")])
+Opt_spde2$par
+unlist(Report_ar1[c("Range","MargSD")])
+Opt_ar1$par
+unlist(Report_ar2[c("Range","MargSD")])
+Opt_ar2$par
